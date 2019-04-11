@@ -136,6 +136,7 @@
 		defaults: {
 			name: '',
 			userid: '',
+			away: false,
 			registered: false,
 			named: false,
 			avatar: 0,
@@ -938,6 +939,8 @@
 					parts = data.substr(0, nlIndex).split('|');
 				}
 				var name = parts[1];
+				var away = name.endsWith('@');
+				if (away) name = name.substr(0, name.length - 1);
 				var named = !!+parts[2];
 
 				var userid = toUserid(name);
@@ -962,6 +965,7 @@
 				this.user.set({
 					name: name,
 					userid: userid,
+					away: away,
 					named: named,
 					avatar: parts[3],
 					settings: settings
@@ -2465,7 +2469,9 @@
 
 			var buf = '<div class="userdetails">';
 			if (avatar) buf += '<img class="trainersprite' + (userid === ownUserid ? ' yours' : '') + '" src="' + Dex.resolveAvatar(avatar) + '" />';
-			buf += '<strong><a href="//pokemonshowdown.com/users/' + userid + '" target="_blank">' + BattleLog.escapeHTML(name) + '</a></strong><br />';
+			var isOffline = data.rooms === false;
+			buf += '<strong><a href="//pokemonshowdown.com/users/' + userid + '" target="_blank">' + BattleLog.escapeHTML(name) + '</a></strong>';
+			buf += ((data.away && !isOffline) ? '<span class="away">Away</span>' : '') + '<br />';
 			buf += '<small>' + (group || '&nbsp;') + '</small>';
 			if (globalgroup) buf += '<br /><small>' + globalgroup + '</small>';
 			if (data.rooms) {
@@ -2507,7 +2513,7 @@
 					}
 				}
 				buf += '<small class="rooms">' + battlebuf + chatbuf + privatebuf + '</small>';
-			} else if (data.rooms === false) {
+			} else if (isOffline) {
 				buf += '<strong class="offline">OFFLINE</strong>';
 			}
 			buf += '</div>';

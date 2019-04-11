@@ -30,11 +30,12 @@
 		updateUserbar: function () {
 			var buf = '';
 			var name = ' ' + app.user.get('name');
-			var color = BattleLog.hashColor(app.user.get('userid'));
+			var isAway = app.user.get('away');
+			var color = isAway ? 'color:#AAA;' : BattleLog.hashColor(app.user.get('userid'));
 			if (!app.user.loaded) {
 				buf = '<button disabled>Loading...</button>';
 			} else if (app.user.get('named')) {
-				buf = '<span class="username" data-name="' + BattleLog.escapeHTML(name) + '" style="' + color + '"><i class="fa fa-user" style="color:#779EC5"></i> ' + BattleLog.escapeHTML(name) + '</span>';
+				buf = '<span class="username" ' + (isAway ? 'data-away=true ' : '') + 'data-name="' + BattleLog.escapeHTML(name) + '" style="' + color + '"><i class="fa fa-user" style="color:' + (isAway ? '#AAA' : '#779EC5') + ';"></i> ' + BattleLog.escapeHTML(name) + '</span>';
 			} else {
 				buf = '<button name="login">Choose name</button>';
 			}
@@ -459,7 +460,8 @@
 			var settings = app.user.get('settings');
 
 			var buf = '';
-			buf += '<p>' + (avatar ? '<img class="trainersprite" src="' + Dex.resolveAvatar(avatar) + '" width="40" height="40" style="vertical-align:middle;cursor:pointer" />' : '') + '<strong>' + BattleLog.escapeHTML(name) + '</strong></p>';
+			buf += '<p>' + (avatar ? '<img class="trainersprite" src="' + Dex.resolveAvatar(avatar) + '" width="40" height="40" style="vertical-align:middle;cursor:pointer" />' : '') + '<strong>' + BattleLog.escapeHTML(name) + '</strong>';
+			buf += (app.user.get('away') ? '<span class="away">Away</span>' : '') + '</p>';
 			buf += '<p><button name="avatars">Change avatar</button></p>';
 			if (app.user.get('named')) {
 				var registered = app.user.get('registered');

@@ -175,7 +175,8 @@
 				position = 'right';
 			}
 			var name = $(e.currentTarget).data('name') || $(e.currentTarget).text();
-			app.addPopup(UserPopup, {name: name, sourceEl: e.currentTarget, position: position});
+			var away = $(e.currentTarget).data('away') || false;
+			app.addPopup(UserPopup, {name: name, away: away, sourceEl: e.currentTarget, position: position});
 		},
 		openPM: function (e) {
 			e.preventDefault();
@@ -1421,6 +1422,7 @@
 		},
 		addJoinLeave: function (action, name, oldid, silent) {
 			var userid = toUserid(name);
+			var isAway = name.endsWith('@');
 			if (!action) {
 				this.$joinLeave = null;
 				this.joinLeave = {
@@ -1443,6 +1445,7 @@
 				this.userList.updateNoUsersOnline();
 			} else if (action === 'rename') {
 				if (oldid) delete this.users[toUserid(oldid)];
+				if (toUserid(oldid) === app.user.get('userid')) app.user.set('away', isAway);
 				this.users[userid] = name;
 				this.userList.remove(oldid);
 				this.userList.add(userid);
@@ -1700,20 +1703,24 @@
 		},
 		constructItem: function (userid) {
 			var name = this.room.users[userid];
+			var isAway = name.endsWith('@');
+			if (isAway) name = name.substr(0, name.length - 1);
 			var text = '';
 			// Sanitising the `userid` here is probably unnecessary, because
 			// IDs can't contain anything dangerous.
 			text += '<li' + (this.room.userForm === userid ? ' class="cur"' : '') + ' id="' + this.room.id + '-userlist-user-' + BattleLog.escapeHTML(userid) + '">';
-			text += '<button class="userbutton username" data-name="' + BattleLog.escapeHTML(name) + '">';
+
+			text += '<button class="userbutton username" ' + (isAway ? 'data-away=true ' : '') + 'data-name="' + BattleLog.escapeHTML(name) + '">';
 			var group = name.charAt(0);
 			var details = Config.groups[group] || {type: 'user'};
 			text += '<em class="group' + (details.group === 2 ? ' staffgroup' : '') + '">' + BattleLog.escapeHTML(group) + '</em>';
+			var color = isAway ? 'color:#AAA;' : BattleLog.hashColor(userid);
 			if (details.type === 'leadership') {
-				text += '<strong><em style="' + BattleLog.hashColor(userid) + '">' + BattleLog.escapeHTML(name.substr(1)) + '</em></strong>';
+				text += '<strong><em style="' + color + '">' + BattleLog.escapeHTML(name.substr(1)) + '</em></strong>';
 			} else if (details.type === 'staff') {
-				text += '<strong style="' + BattleLog.hashColor(userid) + '">' + BattleLog.escapeHTML(name.substr(1)) + '</strong>';
+				text += '<strong style="' + color + '">' + BattleLog.escapeHTML(name.substr(1)) + '</strong>';
 			} else {
-				text += '<span style="' + BattleLog.hashColor(userid) + '">' + BattleLog.escapeHTML(name.substr(1)) + '</span>';
+				text += '<span style="' + color + '">' + BattleLog.escapeHTML(name.substr(1)) + '</span>';
 			}
 			text += '</button>';
 			text += '</li>';
@@ -1736,12 +1743,19 @@
 		},
 		comparator: function (a, b) {
 			if (a === b) return 0;
+			var aName = this.room.users[a];
+			var bName = this.room.users[b];
+
+			var aAway = +!!(aName && aName.endsWith('@'));
+			var bAway = +!!(bName && bName.endsWith('@'));
+			if (aAway !== bAway) return aAway - bAway;
+
 			var aRank = (
-				Config.groups[(this.room.users[a] ? this.room.users[a].charAt(0) : Config.defaultGroup || ' ')] ||
+				Config.groups[(aName ? aName.charAt(0) : Config.defaultGroup || ' ')] ||
 				{order: (Config.defaultOrder || 10006.5)}
 			).order;
 			var bRank = (
-				Config.groups[(this.room.users[b] ? this.room.users[b].charAt(0) : Config.defaultGroup || ' ')] ||
+				Config.groups[(bName ? bName.charAt(0) : Config.defaultGroup || ' ')] ||
 				{order: (Config.defaultOrder || 10006.5)}
 			).order;
 

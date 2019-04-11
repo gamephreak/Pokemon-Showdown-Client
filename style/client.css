@@ -3048,6 +3048,15 @@ a.ilink.yours {
 .ps-popup .textbox {
 	width: 200px;
 }
+.ps-popup .away {
+	border: 1px solid #555;
+	border-radius: 3px;
+	padding: 1px 2px;
+	font-style: italic;
+	background: #F0F0F0;
+	font-size: 0.7em;
+	margin-left: 0.5em;
+}
 
 .userdetails {
 	min-height: 80px;
