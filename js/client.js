@@ -183,6 +183,14 @@
 			this.replaceList = replaceList;
 			this.normalizeList = normalizeList;
 		},
+		applySettings(local, server) {
+			if (local.blockPMs !== server.blockPMs) {
+				app.send(local.blockPMS ? '/blockpms' : '/unblockpms');
+			}
+			if (local.blockChallenges !== server.blockChallenges) {
+				app.send(local.blockChallenges ? '/blockchallenges' : '/unblockchallenges');
+			}
+		},
 		updateSetting: function (setting, value) {
 			var settings = this.get('settings');
 			if (settings[setting] !== value) {
@@ -252,6 +260,7 @@
 			} else if (assertion.indexOf('\n') >= 0 || !assertion) {
 				app.addPopupMessage("Something is interfering with our connection to the login server.");
 			} else {
+				app.updateusers = 0;
 				app.send('/trn ' + name + ',0,' + assertion);
 			}
 		},
@@ -288,6 +297,7 @@
 					self.finishRename(name, data);
 				});
 			} else {
+				app.updateusers = 0;
 				app.send('/trn ' + name);
 			}
 		},
@@ -389,6 +399,7 @@
 			this.initializePopups();
 
 			this.user = new User();
+			this.updateusers = 0;
 			this.ignore = {};
 			this.supports = {};
 
@@ -431,8 +442,6 @@
 						}
 					}
 					app.send('/autojoin ' + autojoinIds.join(','));
-					var settings = Dex.prefs('serversettings') || {};
-					if (Object.keys(settings).length) app.user.set('settings', settings);
 					// HTML5 history throws exceptions when running on file://
 					Backbone.history.start({pushState: !Config.testclient});
 				});
@@ -947,15 +956,18 @@
 				var named = !!+parts[2];
 
 				var userid = toUserid(parsed.name);
+				this.updateusers++;
 				if (userid === this.user.get('userid') && parsed.name !== this.user.get('name')) {
 					$.post(app.user.getActionPHP(), {
 						act: 'changeusername',
 						username: parsed.name
 					}, function () {}, 'text');
 				}
-
+				
 				var settings = app.user.get('settings');
-				if (parts.length > 4) {
+				if (this.updateusers === 1) {
+					settings = Dex.prefs('serversettings') || settings;
+				} else if (parts.length > 4) {
 					// Update our existing settings based on what the server has sent us.
 					// This approach is more robust as it works regardless of whether the
 					// server sends us all the values or just the diffs. Once again, we must
