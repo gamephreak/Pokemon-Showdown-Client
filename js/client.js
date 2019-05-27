@@ -196,8 +196,12 @@
 				default:
 					throw new TypeError('Unknown setting:' + setting);
 				}
-				settings[setting] = value;
-				this.set('settings', settings);
+				// If we simply modify the settings object directly the framework will not
+				// fire a change event from the call to 'set' below given the mutation will
+				// have already taken place.
+				var updated = Object.assign({}, settings);
+				updated[setting] = value;
+				this.set('settings', updated);
 			}
 		},
 		/**
@@ -954,11 +958,10 @@
 				if (parts.length > 4) {
 					// Update our existing settings based on what the server has sent us.
 					// This approach is more robust as it works regardless of whether the
-					// server sends us all the values or just the diffs.
-					var update = JSON.parse(parts[4]);
-					for (var key in update) {
-						settings[key] = update[key];
-					}
+					// server sends us all the values or just the diffs. Once again, we must
+					// be care to copy the 'settings' object as opposed to mutating it
+					// directly so that Backbone's change detection will work.
+					settings = Object.assign({}, settings, JSON.parse(parts[4]));
 				}
 
 				this.user.set({
