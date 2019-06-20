@@ -62,6 +62,37 @@ class Replays {
 		return preg_replace('/[^a-z0-9]+/','',$name);
 	}
 
+	function search($usera = NULL, $userb = NULL, $format = NULL, $byRating = false, $isPrivate = false, $page = 0) {
+		if (!$this->db) return [];
+		if ($page > 100) return [];
+
+		$limit1 = intval(50*($page-1));
+		if ($limit1 < 0) $limit1 = 0;
+
+		$query = "SELECT uploadtime, id, format, p1, p2, rating FROM ps_replays WHERE private = ?";
+		$args = [$isPrivate ? 1 : 0];
+		if (isset($format)) {
+			$query. = " AND formatid = ?";
+			$args[] = $this->toId($format);
+		}
+		if (isset($usera) && isset($userb)) {
+			$query. = " AND ((p1id = ? AND p2id = ?) OR (p1id = ? AND p2id = ?))";
+			$a = $this->toId($usera);
+			$b = $this->toId($userb);
+			array_push($args, $a, $b, $b, $a);
+		} else if (isset($usera) || isset($userb)){
+			$user = $this->toId(isset($usera) ? $usera : $userb);
+			$query. = " AND (p1id = ? OR p2id = ?)";
+			array_push($args, $user, $user);
+		}
+		$query. = " ORDER BY ? DESC LIMIT ?, 51";
+		array_push($args, $byRating ? "rating" : "uploadtime", $limit1);
+
+		$res = $this->db->prepare($query);
+		$res->execute($args);
+		return $res->fetchAll();
+	}
+
 	function search($term, $page = 0, $isPrivate) {
 		if (!$this->db) return [];
 		if ($page > 100) return [];
