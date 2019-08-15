@@ -6,8 +6,13 @@ ini_set('display_startup_errors', TRUE);
 
 include 'theme/panels.lib.php';
 
-$username = @$_REQUEST['user'];
-$format = ($username ? '' : @$_REQUEST['format']);
+$username = @$_REQUEST['username'] ?? null;
+if (!$username) {
+	$username = @$_REQUEST['username2'] ?? null;
+} else {
+	$username2 = @$_REQUEST['username2'] ?? null;
+}
+$format = @$_REQUEST['format'] ?? null;
 $contains = (@$_REQUEST['contains']);
 $byRating = isset($_REQUEST['rating']);
 $isPrivate = isset($_REQUEST['private']);
@@ -69,18 +74,17 @@ if ($username || $format || $contains) {
 	include_once '../lib/ntbb-session.lib.php';
 
 	$username = $users->userid($username);
-	$isPrivateAllowed = ($username === $curuser['userid'] || $curuser['userid'] === 'zarel');
+	$isPrivateAllowed = ($username === $curuser['userid']  || $username2 === $curuser['userid'] || $curuser['userid'] === 'zarel');
 
-	if (!$page) {
+	if (!$page) { // TODO Search results for
 ?>
 		<h1>Search results for "<?php echo htmlspecialchars($username ? $username : ($contains ? $contains : $format)); ?>"</h1>
 <?php
-		if ($format) {
-			$format = $Replays->toID($format);
+		if ($format) {  // TODO fix links
 ?>
 		<ul class="tabbar centered" style="margin-bottom: 18px"><li><a class="button nav-first<?= $byRating ? '' : ' cur' ?>" href="/search/?format=<?= $format ?>" data-target="replace">Newest</a></li><li><a class="button nav-last<?= $byRating ? ' cur' : '' ?>" href="/search/?format=<?= $format ?>&amp;rating" data-target="replace">Highest rated</a></li></ul>
 <?php
-		} else if ($isPrivateAllowed) {
+		} else if ($isPrivateAllowed) {  // TODO fix links
 ?>
 		<ul class="tabbar centered" style="margin-bottom: 18px"><li><a class="button nav-first<?= $isPrivate ? '' : ' cur' ?>" href="/search/?user=<?= $username ?>" data-target="replace">Public</a></li><li><a class="button nav-last<?= $isPrivate ? ' cur' : '' ?>" href="/search/?user=<?= $username ?>&amp;private" data-target="replace">Private</a></li></ul>
 <?php
@@ -95,12 +99,12 @@ if ($username || $format || $contains) {
 		// no
 	} else if ($username) {
 		if (!$isPrivate || $isPrivateAllowed) {
-			$replays = $Replays->search(["username" => $username, "isPrivate" => $isPrivate, "page" => $page]);
+			$replays = $Replays->search(["username" => $username, "username2" => $username2, "format" => $format, "isPrivate" => $isPrivate, "byRating" => $byRating, "page" => $page]);
 		}
 	} else if ($contains) {
 		$replays = $Replays->fullSearch($contains, $page);
 	} else {
-		$replays = $Replays->search(["format" => $format, "byRating" => $byRating, "page" => $page]);
+		$replays = $Replays->search(["format" => $form, "byRating" => $byRating, "page" => $page]);
 	}
 
 	$time = time();
@@ -108,7 +112,7 @@ if ($username || $format || $contains) {
 	$count = 0;
 
 	// $newoffset = 0;
-	if ($isPrivate && !$isPrivateAllowed) {
+	if ($isPrivate && !$isPrivateAllowed) { // TODO fix username2 account if present
 ?>
 		<li>Error: You must be logged into account "<?= htmlspecialchars($username) ?>" to see their private replays (You're currently "<?= $curuser['userid'] ?>").</li>
 <?php
@@ -252,7 +256,7 @@ if ($username || $format || $contains) {
 ?>
 		</ul>
 <?php
-		if ($count === 51) {
+		if ($count === 51) { // TODO fix more results link
 ?>
 		<p style="text-align: center"><button class="button" name="moreResults" value="<?= /* $newoffset */ '' ?>" data-user="<?= htmlspecialchars($username) ?>" data-format="<?= htmlspecialchars($format) ?>" data-private="<?= $isPrivate ? '1' : '' ?>">More<br /><i class="fa fa-caret-down"></i></button></p>
 <?php

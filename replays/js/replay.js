@@ -30,6 +30,7 @@ var ReplaySidebarPanel = Panels.StaticPanel.extend({
 		// var offset = elem.value;
 		var page = Number(elem.value);
 		if (!page) page = 2;
+		// TODO update with username2 etc
 		var user = elem.dataset.user;
 		var format = elem.dataset.format;
 		var private = !!elem.dataset.private;

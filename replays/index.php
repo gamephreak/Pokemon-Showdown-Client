@@ -22,14 +22,10 @@ $panels->start();
 		<!--p>Username search temporarily down, will be back up soon</p-->
 		<form action="/search/" method="get" data-target="replace">
 			<p style="text-align:center">
-				<label><input type="text" name="user" class="textbox" placeholder="Username" size="24" /></label>
-				<button type="submit"><strong>Search for user</strong></button>
-			</p>
-		</form>
-		<form action="/search/" method="get" data-target="replace">
-			<p style="text-align:center">
-				<label><input type="text" name="format" class="textbox" placeholder="Format" size="24" /></label>
-				<button type="submit"><strong>Search by format</strong></button>
+        <p><input type="text" name="username" class="textbox" placeholder="Player" size="24" /></p>
+        <p><input type="text" name="username2" class="textbox" placeholder="Opponent" size="24" /></p>
+				<p><input type="text" name="format" class="textbox" placeholder="Format" size="24" /></p>
+				<p><button type="submit"><strong>Search</strong></button></p>
 			</p>
 		</form>
 		<h1>Featured replays</h1>
