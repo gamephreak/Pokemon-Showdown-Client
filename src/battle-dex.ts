@@ -215,6 +215,43 @@ const Dex = new class implements ModdedDex {
 	readonly statNames: ReadonlyArray<StatName> = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 	readonly statNamesExceptHP: ReadonlyArray<StatNameExceptHP> = ['atk', 'def', 'spa', 'spd', 'spe'];
 
+	public static readonly SPRITES_SOURCES: Readonly<{[name: string]: string}> = {
+		// 'Green': 'gen1rg',
+		// 'Red/Blue': 'gen1rb',
+		'Yellow': 'gen1',
+		// 'Gold': 'gen2g'
+		// 'Silver': 'gen2s'
+		'Crystal': 'gen2',
+		// 'Crystal (Animated)': 'gen2ani',
+		// 'Ruby/Sapphire': 'gen3rs',
+		'Emerald': 'gen3',
+		// 'FireRed/LeafGreen': 'gen3frlg',
+		// 'Diamond/Pearl': 'gen4dp',
+		// 'Diamond/Pearl (Animated)': 'gen4dpani',
+		'Platinum': 'gen4',
+		// 'Platinum (Animated)': 'gen4ani':
+		// 'HeartGold/SoulSilver': 'gen4hgss':
+		// 'HeartGold/SoulSilver (Animated)': 'gen4hgssani':
+		'Black/White': 'gen5',
+		'Black/White (Animated)': 'gen5ani',
+		// 'Modern': 'static',
+		'Modern (Animated)': 'ani',
+	};
+
+	public static readonly SPRITE_GENS: Readonly<{[key: string]: number}> = {
+		'gen1rg': 1, 'gen1rb': 1, 'gen1': 1,
+		'gen2g': 2, 'gen2s': 2, 'gen2': 2, 'gen2ani': 2,
+		'gen3rs': 4, 'gen3': 5, 'gen3frlg': 3,
+		'gen4dp': 4, 'gen4': 4, 'gen4ani': 4, 'gen4hgss': 4, 'gen4hgssani': 4,
+		'gen5': 5, 'gen5ani': 5,
+		'ani': 6,
+	};
+
+	public static readonly SPRITE_GEN_DEFAULTS: Readonly<{static: string[], animated: string[]}> = {
+		static: ['', 'gen1', 'gen2', 'gen3', 'gen4', 'gen5', 'ani' /* static */, 'ani' /* static */],
+		animated: ['', 'gen1', 'gen2' /* 'gen2ani' */, 'gen3', 'gen4' /* 'gen4ani' */, 'gen5ani', 'ani', 'ani'],
+	};
+
 	pokeballs: string[] | null = null;
 
 	resourcePrefix = (() => {
@@ -502,6 +539,15 @@ const Dex = new class implements ModdedDex {
 		el.src = path + 'data/pokedex-mini-bw.js' + qs;
 		document.getElementsByTagName('body')[0].appendChild(el);
 	}
+	getSpritePreference(template: Template, gen: number) {
+		if (pref && SPRITE_GENS[pref]) {
+			if (SPRITE_GENS[pref] >= template.gen) return {spriteDir: pref, gen: SPRITE_GENS[pref]};
+			gen = 5; // fallback
+		}
+		const ani = !pref || !pref.endsWith('ani');
+		gen = Math.max(gen, Math.min(template.gen, 5));
+		return {spriteDir: SPRITE_GEN_DEFAULTS[ani ? 'animated' : 'static'][gen], gen};
+	}
 	getSpriteData(pokemon: Pokemon | Template | string, siden: number, options: {
 		gen?: number, shiny?: boolean, gender?: GenderName, afd?: boolean, noScale?: boolean, mod?: string,
 	} = {gen: 6}) {
@@ -540,20 +586,16 @@ const Dex = new class implements ModdedDex {
 		}
 
 		// Decide what gen sprites to use.
-		let fieldGenNum = options.gen;
-		if (Dex.prefs('nopastgens')) fieldGenNum = 6;
-		if (Dex.prefs('bwgfx') && fieldGenNum >= 6) fieldGenNum = 5;
-		let genNum = Math.max(fieldGenNum, Math.min(template.gen, 5));
-		let gen = ['', 'gen1', 'gen2', 'gen3', 'gen4', 'gen5', '', ''][genNum];
+		const {spriteDir, gen} = getSpritePreference(template, options.gen);
 
 		let animationData = null;
 		let miscData = null;
 		let speciesid = template.speciesid;
 		if (template.isTotem) speciesid = toID(name);
-		if (gen === '' && window.BattlePokemonSprites) {
+		if (spriteDir === 'ani' && window.BattlePokemonSprites) {
 			animationData = BattlePokemonSprites[speciesid];
 		}
-		if (gen === 'gen5' && window.BattlePokemonSpritesBW) {
+		if (spriteDir === 'gen5ani' && window.BattlePokemonSpritesBW) {
 			animationData = BattlePokemonSpritesBW[speciesid];
 		}
 		if (window.BattlePokemonSprites) miscData = BattlePokemonSprites[speciesid];
@@ -584,7 +626,7 @@ const Dex = new class implements ModdedDex {
 			spriteData.cryurl += (window.nodewebkit ? '.ogg' : '.mp3');
 		}
 
-		if (options.shiny && options.gen > 1) dir += '-shiny';
+		if (options.shiny && options.gen > 1) dir += '-shiny'; // TODO
 
 		// April Fool's 2014
 		if (window.Config && Config.server && Config.server.afd || options.afd) {
@@ -601,10 +643,10 @@ const Dex = new class implements ModdedDex {
 
 		if (animationData[facing + 'f'] && options.gender === 'F') facing += 'f';
 		let allowAnim = !Dex.prefs('noanim') && !Dex.prefs('nogif');
-		if (allowAnim && genNum >= 6) spriteData.pixelated = false;
-		if (allowAnim && animationData[facing] && genNum >= 5) {
+		if (allowAnim && gen >= 6) spriteData.pixelated = false;
+		if (allowAnim && animationData[facing] && gen >= 5) {
 			if (facing.slice(-1) === 'f') name += '-f';
-			dir = gen + 'ani' + dir;
+			dir = spriteDir + 'ani' + dir;
 
 			spriteData.w = animationData[facing].w;
 			spriteData.h = animationData[facing].h;
@@ -612,12 +654,12 @@ const Dex = new class implements ModdedDex {
 		} else {
 			// There is no entry or enough data in pokedex-mini.js
 			// Handle these in case-by-case basis; either using BW sprites or matching the played gen.
-			if (gen === '') gen = 'gen5';
-			dir = gen + dir;
+			if (spriteDir === '') spriteDir = 'gen5';
+			dir = spriteDir + dir;
 
 			// Gender differences don't exist prior to Gen 4,
 			// so there are no sprites for it
-			if (genNum >= 4 && miscData['frontf'] && options.gender === 'F') {
+			if (gen >= 4 && miscData['frontf'] && options.gender === 'F') {
 				name += '-f';
 			}
 
@@ -625,9 +667,9 @@ const Dex = new class implements ModdedDex {
 		}
 
 		if (!options.noScale) {
-			if (fieldGenNum > 5) {
+			if (gen > 5) {
 				// no scaling
-			} else if (!spriteData.isBackSprite || fieldGenNum === 5) {
+			} else if (!spriteData.isBackSprite || gen === 5) {
 				spriteData.w *= 2;
 				spriteData.h *= 2;
 				spriteData.y += -16;
@@ -637,9 +679,9 @@ const Dex = new class implements ModdedDex {
 				spriteData.h *= 2 / 1.5;
 				spriteData.y += -11;
 			}
-			if (fieldGenNum === 5) spriteData.y = -35;
-			if (fieldGenNum === 5 && spriteData.isBackSprite) spriteData.y += 40;
-			if (genNum <= 2) spriteData.y += 2;
+			if (gen === 5) spriteData.y = -35;
+			if (gen === 5 && spriteData.isBackSprite) spriteData.y += 40;
+			if (gen <= 2) spriteData.y += 2;
 		}
 		if (template.isTotem && !options.noScale) {
 			spriteData.w *= 1.5;
@@ -714,7 +756,7 @@ const Dex = new class implements ModdedDex {
 		}
 		let shiny = (pokemon.shiny ? '-shiny' : '');
 		// let sdata;
-		// if (BattlePokemonSprites[id] && BattlePokemonSprites[id].front && !Dex.prefs('bwgfx')) {
+		// if (BattlePokemonSprites[id] && BattlePokemonSprites[id].front && !Dex.prefs('spritegfx').startsWith('gen')) {
 		// 	if (BattlePokemonSprites[id].front.anif && pokemon.gender === 'F') {
 		// 		spriteid += '-f';
 		// 		sdata = BattlePokemonSprites[id].front.anif;
@@ -724,12 +766,12 @@ const Dex = new class implements ModdedDex {
 		// } else {
 		// 	return 'background-image:url(' + Dex.resourcePrefix + 'sprites/gen5' + shiny + '/' + spriteid + '.png);background-position:10px 5px;background-repeat:no-repeat';
 		// }
-		if (Dex.prefs('nopastgens')) gen = 6;
+		// if (Dex.prefs('nopastgens')) gen = 6; // TODO unsupported for teambuilder...
 		let spriteDir = Dex.resourcePrefix + 'sprites/dex';
 		let xydexExists = !template.isNonstandard || [
 			"pikachustarter", "eeveestarter", "meltan", "melmetal", "fidgit", "stratagem", "tomohawk", "mollux", "crucibelle", "crucibellemega", "kerfluffle", "pajantom", "jumbao", "caribolt", "smokomodo", "snaelstrom", "equilibra", "scratchet", "pluffle", "smogecko", "pokestarufo", "pokestarufo2", "pokestarbrycenman", "pokestarmt", "pokestarmt2", "pokestargiant", "pokestarhumanoid", "pokestarmonster", "pokestarf00", "pokestarf002", "pokestarspirit",
 		].includes(template.id);
-		if ((!gen || gen >= 6) && xydexExists && !Dex.prefs('bwgfx')) {
+		if ((!gen || gen >= 6) && xydexExists && !Dex.prefs('spritegfx').startsWith('gen')) {
 			let offset = '-2px -3px';
 			if (template.gen >= 7) offset = '-6px -7px';
 			if (id.substr(0, 6) === 'arceus') offset = '-2px 7px';
