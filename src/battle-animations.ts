@@ -36,7 +36,7 @@ class BattleScene {
 	acceleration = 1;
 
 	/** Note: Not the actual generation of the battle, but the gen of the sprites/background */
-	gen = 7;
+	graphicsGen = 7;
 	mod = '';
 	/** 1 = singles, 2 = doubles, 3 = triples */
 	activeCount = 1;
@@ -340,9 +340,14 @@ class BattleScene {
 
 		let left = 210;
 		let top = 245;
-		let scale = (obj.gen === 5
-			? 2.0 - ((loc.z!) / 200)
-			: 1.5 - 0.5 * ((loc.z!) / 200));
+		let scale = 1;
+		if (Dex.prefs('noscale')) {
+			scale = 1;
+		} else if (obj.gen === 5 && !Dex.prefs('oversizebw')) {
+			scale = 2.0 - ((loc.z!) / 200);
+		} else {
+			scale = 1.5 - 0.5 * ((loc.z!) / 200);
+		}
 		if (scale < .1) scale = .1;
 
 		left += (410 - 190) * ((loc.z!) / 200);
@@ -553,10 +558,9 @@ class BattleScene {
 	}
 
 	updateGen() {
-		let gen = this.battle.gen;
-		if (Dex.prefs('nopastgens')) gen = 6;
-		if (Dex.prefs('bwgfx') && gen > 5) gen = 5;
-		this.gen = gen;
+		const gen = this.battle.gen;
+		const graphics = Dex.prefs('graphics');
+		this.graphicsGen = graphics && Dex.SPRITE_GENS[graphics] || gen;
 		this.activeCount = this.battle.mySide?.active.length || 1;
 
 		const isSPL = (typeof this.battle.rated === 'string' && this.battle.rated.startsWith("Smogon Premier League"));
@@ -727,7 +731,7 @@ class BattleScene {
 				if (pokemon.species === 'Lombre') lombreCount++;
 
 				let spriteData = Dex.getSpriteData(pokemon, siden, {
-					gen: this.gen,
+					gen: this.graphicsGen,
 					noScale: true,
 				});
 				let y = 0;
@@ -966,7 +970,7 @@ class BattleScene {
 	addPokemonSprite(pokemon: Pokemon) {
 		const siden = pokemon.side.n;
 		const sprite = new PokemonSprite(Dex.getSpriteData(pokemon, siden, {
-			gen: this.gen,
+			gen: this.graphicsGen,
 		}), {
 			x: pokemon.side.x,
 			y: pokemon.side.y,
@@ -1735,7 +1739,7 @@ class PokemonSprite extends Sprite {
 		if (!this.scene.animating) return;
 		if (this.$sub) return;
 		const subsp = Dex.getSpriteData('substitute', this.siden, {
-			gen: this.scene.gen,
+			gen: this.scene.graphicsGen,
 		});
 		this.subsp = subsp;
 		this.$sub = $('<img src="' + subsp.url + '" style="display:block;opacity:0;position:absolute"' + (subsp.pixelated ? ' class="pixelated"' : '') + ' />');
@@ -1849,7 +1853,7 @@ class PokemonSprite extends Sprite {
 		if (pokemon.volatiles.formechange || pokemon.volatiles.dynamax) {
 			if (!this.oldsp) this.oldsp = this.sp;
 			this.sp = Dex.getSpriteData(pokemon, this.isBackSprite ? 0 : 1, {
-				gen: this.scene.gen,
+				gen: this.scene.graphicsGen,
 			});
 		} else if (this.oldsp) {
 			this.sp = this.oldsp;
@@ -1924,7 +1928,7 @@ class PokemonSprite extends Sprite {
 	recalculatePos(slot: number) {
 		let moreActive = this.scene.activeCount - 1;
 		let statbarOffset = 0;
-		if (this.scene.gen <= 4 && moreActive) {
+		if (this.scene.graphicsGen <= 4 && moreActive) {
 			this.x = (slot - 0.52) * (this.isBackSprite ? -1 : 1) * -55;
 			this.y = (this.isBackSprite ? -1 : 1) + 1;
 			if (!this.isBackSprite) statbarOffset = 30 * slot;
@@ -1951,11 +1955,11 @@ class PokemonSprite extends Sprite {
 			if (this.isBackSprite) statbarOffset = -7 * slot;
 			if (!this.isBackSprite && moreActive === 2) statbarOffset = 14 * slot - 10;
 		}
-		if (this.scene.gen <= 2) {
+		if (this.scene.graphicsGen <= 2) {
 			statbarOffset += this.isBackSprite ? 1 : 20;
-		} else if (this.scene.gen <= 3) {
+		} else if (this.scene.graphicsGen <= 3) {
 			statbarOffset += this.isBackSprite ? 5 : 30;
-		} else if (this.scene.gen !== 5) {
+		} else if (this.scene.graphicsGen !== 5 && !Dex.prefs('oversizebw')) {
 			statbarOffset += this.isBackSprite ? 20 : 30;
 		}
 
@@ -2020,7 +2024,7 @@ class PokemonSprite extends Sprite {
 			z: this.z,
 			time: 300 / this.scene.acceleration,
 		}, 'ballistic2', 'fade');
-		if (this.scene.gen <= 4) {
+		if (this.scene.graphicsGen <= 4) {
 			this.delay(this.scene.timeOffset + 300 / this.scene.acceleration).anim({
 				x: this.x,
 				y: this.y,
@@ -2157,7 +2161,7 @@ class PokemonSprite extends Sprite {
 			}
 			return;
 		}
-		if (this.scene.gen <= 4) {
+		if (this.scene.graphicsGen <= 4) {
 			this.anim({
 				x: this.x,
 				y: this.y - 25,
@@ -2241,7 +2245,7 @@ class PokemonSprite extends Sprite {
 	animTransform(pokemon: Pokemon, isCustomAnim?: boolean, isPermanent?: boolean) {
 		if (!this.scene.animating && !isPermanent) return;
 		let sp = Dex.getSpriteData(pokemon, this.isBackSprite ? 0 : 1, {
-			gen: this.scene.gen,
+			gen: this.scene.graphicsGen,
 		});
 		let oldsp = this.sp;
 		if (isPermanent) {
