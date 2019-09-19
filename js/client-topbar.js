@@ -439,8 +439,9 @@
 		events: {
 			'change input[name=noanim]': 'setNoanim',
 			'change input[name=nogif]': 'setNogif',
-			'change input[name=bwgfx]': 'setBwgfx',
-			'change input[name=nopastgens]': 'setNopastgens',
+			'change input[name=oversizebw]': 'setOversizebw',
+			'change input[name=noscale]': 'setNoscale',
+			'change select[name=graphics]': 'setGraphics',
 			'change select[name=tournaments]': 'setTournaments',
 			'change input[name=blockchallenges]': 'setBlockchallenges',
 			'change input[name=blockpms]': 'setBlockpms',
@@ -485,8 +486,15 @@
 			if (navigator.userAgent.includes(' Chrome/64.')) {
 				buf += '<p><label class="optlabel"><input type="checkbox" name="nogif"' + (Dex.prefs('nogif') ? ' checked' : '') + ' /> Disable GIFs for Chrome 64 bug</label></p>';
 			}
-			buf += '<p><label class="optlabel"><input type="checkbox" name="bwgfx"' + (Dex.prefs('bwgfx') ? ' checked' : '') + ' /> Use BW sprites instead of XY models</label></p>';
-			buf += '<p><label class="optlabel"><input type="checkbox" name="nopastgens"' + (Dex.prefs('nopastgens') ? ' checked' : '') + ' /> Use modern sprites for past generations</label></p>';
+			buf += '<p><label class="optlabel"><input type="checkbox" name="oversizebw"' + (Dex.prefs('oversizebw') ? ' checked' : '') + ' /> Oversize BW Sprites</label></p>';
+			buf += '<p><label class="optlabel"><input type="checkbox" name="noscale"' + (Dex.prefs('noscale') ? ' checked' : '') + ' /> Disable sprite scaling</label></p>';
+			buf += '<p><label class="optlabel">Graphics: <select name="graphics">';
+			var graphics = Dex.prefs('graphics');
+			for (var src in Dex.SPRITE_SOURCES) {
+				var gen = Dex.SPRITE_SOURCES[src];
+				buf += '<option value="' + gen + '"' + (graphics === gen ? ' selected="selected"' : '') + '>' + src + '</option>';
+			}
+			buf += '</select></label></p>';
 
 			buf += '<hr />';
 			buf += '<p><strong>Chat</strong></p>';
@@ -540,26 +548,35 @@
 		setNoanim: function (e) {
 			var noanim = !!e.currentTarget.checked;
 			Dex.prefs('noanim', noanim);
-			Dex.loadSpriteData(noanim || Dex.prefs('bwgfx') ? 'bw' : 'xy');
+			var graphics = Dex.pref('graphics');
+			var bw = Dex.prefs('nogif') || (graphics ? graphics !== 'ani' : noanim);
+			Dex.loadSpriteData(bw ? 'bw' : 'xy');
 		},
 		setNogif: function (e) {
 			var nogif = !!e.currentTarget.checked;
 			Dex.prefs('nogif', nogif);
-			Dex.loadSpriteData(nogif || Dex.prefs('bwgfx') ? 'bw' : 'xy');
+			var graphics = Dex.pref('graphics');
+			var bw = nogif || (graphics ? graphics !== 'ani' : Dex.prefs('noanim'));
+			Dex.loadSpriteData(bw ? 'bw' : 'xy');
+		},
+		setOversizebw: function (e) {
+			var oversizebw = !!e.currentTarget.checked;
+			Dex.prefs('oversizebw', oversizebw);
+		},
+		setNoscale: function (e) {
+			var noscale = !!e.currentTarget.checked;
+			Dex.prefs('noscale', noscale);
 		},
 		setDark: function (e) {
 			var dark = !!e.currentTarget.checked;
 			Dex.prefs('dark', dark);
 			$('html').toggleClass('dark', dark);
 		},
-		setBwgfx: function (e) {
-			var bwgfx = !!e.currentTarget.checked;
-			Dex.prefs('bwgfx', bwgfx);
-			Dex.loadSpriteData(bwgfx || Dex.prefs('noanim') ? 'bw' : 'xy');
-		},
-		setNopastgens: function (e) {
-			var nopastgens = !!e.currentTarget.checked;
-			Dex.prefs('nopastgens', nopastgens);
+		setGraphics: function (e) {
+			var graphics = e.currentTarget.value;
+			Dex.prefs('graphics', graphics);
+			var bw = Dex.prefs('nogif') || (graphics ? graphics !== 'ani' : Dex.prefs('noanim'));
+			Dex.loadSpriteData(bw ? 'bw' : 'xy');
 		},
 		setTournaments: function (e) {
 			var tournaments = e.currentTarget.value;

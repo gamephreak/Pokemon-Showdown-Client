@@ -235,6 +235,53 @@ const Dex = new class implements ModdedDex {
 	loadedSpriteData = {xy: 1, bw: 0};
 	moddedDexes: {[mod: string]: ModdedDex} = {};
 
+ SPRITE_SOURCES: {[name: string]: string | null} = {
+		'Default': '',
+		'Green': 'gen1rg',
+		'Red/Blue': 'gen1rb',
+		'Yellow': 'gen1',
+		'Gold': 'gen2g',
+		'Silver': 'gen2s',
+		'Crystal': 'gen2',
+		// 'Crystal (Animated)': 'gen2ani',
+		'Ruby/Sapphire': 'gen3rs',
+		'FireRed/LeafGreen': 'gen3frlg',
+		'Emerald': 'gen3',
+		// 'Emerald (Animated)': 'gen3ani',
+		'Diamond/Pearl': 'gen4dp',
+		// 'Diamond/Pearl (Animated)': 'gen4dpani',
+		'Platinum': 'gen4',
+		// 'Platinum (Animated)': 'gen4ani':
+		// 'HeartGold/SoulSilver': 'gen4hgss':
+		// 'HeartGold/SoulSilver (Animated)': 'gen4hgssani':
+		'Black/White': 'gen5',
+		'Black/White (Animated)': 'gen5ani',
+		// 'Modern': 'dex',
+		'Modern (Animated)': 'ani',
+	};
+
+	SPRITE_GENS: {[dir: string]: number} = {
+		'gen1rg': 1,
+		'gen1rb': 1,
+		'gen1': 1,
+		'gen2g': 2,
+		'gen2s': 2,
+		'gen2': 2,
+		'gen2ani': 3,
+		'gen3rs': 4,
+		'gen3': 5,
+		'gen3frlg': 3,
+		'gen4dp': 4,
+		'gen4': 4,
+		'gen4ani': 4,
+		'gen4hgss': 4,
+		'gen4hgssani': 4,
+		'gen5': 5,
+		'gen5ani': 5,
+		'': 6,
+		'ani': 6,
+	};
+
 	mod(modid: ID): ModdedDex {
 		if (modid === 'gen8') return this;
 		if (!window.BattleTeambuilderTable) return this;
@@ -502,11 +549,13 @@ const Dex = new class implements ModdedDex {
 		el.src = path + 'data/pokedex-mini-bw.js' + qs;
 		document.getElementsByTagName('body')[0].appendChild(el);
 	}
+
 	getSpriteData(pokemon: Pokemon | Template | string, siden: number, options: {
 		gen?: number, shiny?: boolean, gender?: GenderName, afd?: boolean, noScale?: boolean, mod?: string,
 	} = {gen: 6}) {
 		const mechanicsGen = options.gen || 6;
 		let isDynamax = false;
+		const noScale = options.noScale === undefined ? !!Dex.prefs('noscale') : options.noScale;
 		if (pokemon instanceof Pokemon) {
 			if (pokemon.volatiles.transform) {
 				options.shiny = pokemon.volatiles.transform[2];
@@ -549,15 +598,17 @@ const Dex = new class implements ModdedDex {
 		//   - mechanicsGen: the generation number of the mechanics and battle (options.gen)
 		//   - graphicsGen: the generation number of sprite/field graphics the user has requested.
 		//     This will default to mechanicsGen, but may be altered depending on user preferences.
-		//   - spriteData.gen: the generation number of a the specific Pokemon sprite in question.
+		//   - spriteGen: the generation number of a the specific Pokemon sprite in question.
 		//     This defaults to graphicsGen, but if the graphicsGen doesn't have a sprite for the Pokemon
 		//     (eg. Darmanitan in graphicsGen 2) then we go up gens until it exists.
 		//
-		let graphicsGen = mechanicsGen;
-		if (Dex.prefs('nopastgens')) graphicsGen = 6;
-		if (Dex.prefs('bwgfx') && graphicsGen >= 6) graphicsGen = 5;
-		spriteData.gen = Math.max(graphicsGen, Math.min(template.gen, 5));
-		const baseDir = ['', 'gen1', 'gen2', 'gen3', 'gen4', 'gen5', '', '', ''][spriteData.gen];
+		const graphics = Dex.prefs('graphics');
+		const graphicsGen = graphics && Dex.SPRITE_GENS[graphics] || mechanicsGen;
+		const spriteGen = Math.max(graphicsGen, Math.min(template.gen, 5));
+		const baseDir = ['', 'gen1', 'gen2', 'gen3', 'gen4', 'gen5', '', '', ''][spriteGen];
+		spriteData.gen = spriteGen;
+
+		const oversizeBW = graphicsGen === 5 && !!Dex.prefs('oversizebw');
 
 		let animationData = null;
 		let miscData = null;
@@ -613,7 +664,7 @@ const Dex = new class implements ModdedDex {
 		}
 
 		if (animationData[facing + 'f'] && options.gender === 'F') facing += 'f';
-		let allowAnim = !Dex.prefs('noanim') && !Dex.prefs('nogif');
+		const allowAnim = !Dex.prefs('nogif') && (graphics ? graphics.endsWith('ani') : !Dex.prefs('noanim'));
 		if (allowAnim && spriteData.gen >= 6) spriteData.pixelated = false;
 		if (allowAnim && animationData[facing] && spriteData.gen >= 5) {
 			if (facing.slice(-1) === 'f') name += '-f';
@@ -636,10 +687,10 @@ const Dex = new class implements ModdedDex {
 			spriteData.url += dir + '/' + name + '.png';
 		}
 
-		if (!options.noScale) {
-			if (graphicsGen > 4) {
+		if (!noScale) {
+			if (graphicsGen > 4 && !oversizeBW) {
 				// no scaling
-			} else if (!spriteData.isBackSprite) {
+			} else if (!spriteData.isBackSprite || oversizeBW) {
 				spriteData.w *= 2;
 				spriteData.h *= 2;
 				spriteData.y += -16;
@@ -650,12 +701,14 @@ const Dex = new class implements ModdedDex {
 				spriteData.y += -11;
 			}
 			if (spriteData.gen <= 2) spriteData.y += 2;
+			if (oversizeBW) spriteData.y = spriteData.isBackSprite ? (spriteData.y + 5) : -35;
 		}
-		if (isDynamax && !options.noScale) {
+
+		if (isDynamax && !noScale) {
 			spriteData.w *= 2;
 			spriteData.h *= 2;
 			spriteData.y += -22;
-		} else if ((template.isTotem || isDynamax) && !options.noScale) {
+		} else if ((template.isTotem || isDynamax) && !noScale) {
 			spriteData.w *= 1.5;
 			spriteData.h *= 1.5;
 			spriteData.y += -11;
@@ -738,13 +791,15 @@ const Dex = new class implements ModdedDex {
 		// } else {
 		// 	return 'background-image:url(' + Dex.resourcePrefix + 'sprites/gen5' + shiny + '/' + spriteid + '.png);background-position:10px 5px;background-repeat:no-repeat';
 		// }
-		if (Dex.prefs('nopastgens')) gen = 6;
+
+		const graphics = Dex.prefs('graphics');
+		gen = graphics && Dex.SPRITE_GENS[graphics] || gen;
 		let spriteDir = Dex.resourcePrefix + 'sprites/dex';
 		let xydexExists = (!template.isNonstandard || template.isNonstandard === 'Past') || [
 			"pikachustarter", "eeveestarter", "meltan", "melmetal", "fidgit", "stratagem", "tomohawk", "mollux", "crucibelle", "crucibellemega", "kerfluffle", "pajantom", "jumbao", "caribolt", "smokomodo", "snaelstrom", "equilibra", "scratchet", "pluffle", "smogecko", "pokestarufo", "pokestarufo2", "pokestarbrycenman", "pokestarmt", "pokestarmt2", "pokestargiant", "pokestarhumanoid", "pokestarmonster", "pokestarf00", "pokestarf002", "pokestarspirit",
 		].includes(template.id);
 		if (template.gen === 8) xydexExists = false;
-		if ((!gen || gen >= 6) && xydexExists && !Dex.prefs('bwgfx')) {
+		if ((!gen || gen >= 6) && xydexExists) {
 			let offset = '-2px -3px';
 			if (template.gen >= 7) offset = '-6px -7px';
 			if (id.substr(0, 6) === 'arceus') offset = '-2px 7px';

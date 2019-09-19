@@ -421,6 +421,16 @@ function toId() {
 						Dex.prefs('tournaments', Dex.prefs('notournaments') ? 'hide' : 'notify');
 						Dex.prefs('notournaments', null, true);
 					}
+					// Migrate old sprite preference settings
+					if (Dex.prefs('nopastgens')) {
+						Dex.prefs('graphics', 'ani');
+						Dex.prefs('nopastgens', null, true);
+					}
+					// Dex.prefs('graphics', 'gen5ani') isn't quite the same behavior as the explicitly set
+					// graphicsGen take precedence even over earlier gens. Because the migration isn't perfect
+					// we just delete the old pref and let the user update the selector themselves with their
+					// actual preference.
+					if (Dex.prefs('bwgfx')) Dex.prefs('bwgfx', null, true);
 					var autojoin = (Dex.prefs('autojoin') || '');
 					var autojoinIds = [];
 					if (typeof autojoin === 'string') {
@@ -480,10 +490,10 @@ function toId() {
 					self.updateLayout();
 				}
 
-				if (Dex.prefs('bwgfx') || Dex.prefs('noanim')) {
-					// since xy data is loaded by default, only call
-					// loadSpriteData if we want bw sprites or if we need bw
-					// sprite data (if animations are disabled)
+				var graphics = Dex.prefs('graphics');
+				if (Dex.prefs('nogif') || (graphics ? graphics !== 'ani' : Dex.prefs('noanim'))) {
+					// If weren't not relying on the default graphics (current animated models),
+					// load the BW sprite data in case we need to fall back to it.
 					Dex.loadSpriteData('bw');
 				}
 			});
@@ -754,7 +764,7 @@ function toId() {
 			};
 			this.socket.onmessage = function (msg) {
 				if (window.console && console.log) {
-					console.log('<< ' + msg.data);
+					// console.log('<< ' + msg.data);
 				}
 				self.receive(msg.data);
 			};
@@ -808,7 +818,7 @@ function toId() {
 				return;
 			}
 			if (window.console && console.log) {
-				console.log('>> ' + data);
+				//console.log('>> ' + data);
 			}
 			this.socket.send(data);
 		},
