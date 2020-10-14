@@ -1429,9 +1429,11 @@ class Battle {
 			break;
 		case 'frz':
 			this.scene.resultAnim(pokemon, 'Frozen', 'frz');
+			pokemon.lastMove = '';
 			break;
 		case 'slp':
 			this.scene.resultAnim(pokemon, 'Asleep', 'slp');
+			pokemon.lastMove = '';
 			pokemon.statusData.sleepTurns++;
 			break;
 		case 'truant':
